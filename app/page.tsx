@@ -21,15 +21,12 @@ export default function Home() {
   // 펼쳐진 기사 ID 관리
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  // 1. 데이터 로딩 (최초 1회)
+  // 1. 데이터 로딩 (최초 1회) - [수정됨] 뷰(View)에서 통째로 가져옵니다!
   useEffect(() => {
     async function fetchData() {
       const { data, error } = await supabase
-        .from('news_scripts')
-        .select(`
-          id, title, link, script, topic, mode, created_at, status,
-          news_youtube_links ( youtube_url )
-        `)
+        .from('vw_news_with_youtube') // 기존 news_scripts에서 뷰로 변경
+        .select('*') // 조인 구문 없이 전체 컬럼을 바로 가져옵니다
         .order('created_at', { ascending: false });
 
       if (!error && data) {
@@ -45,15 +42,12 @@ export default function Home() {
   // 2. 검색 및 필터 핸들러
   const handleSearch = () => {
     const filtered = allNews.filter((item) => {
-      // 제목 및 스크립트 검색
       const matchesSearch = 
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.script?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // 토픽 필터
       const matchesTopic = selectedTopic === 'ALL' || item.topic === selectedTopic;
       
-      // 날짜 필터 (선택한 시작일 이후)
       const itemDate = item.created_at.split('T')[0];
       const matchesDate = itemDate >= startDate;
       
@@ -62,7 +56,7 @@ export default function Home() {
 
     setFilteredNews(filtered);
     setAppliedDate(startDate);
-    setExpandedId(null); // 검색 시 펼쳐진 상태 초기화
+    setExpandedId(null); 
   };
 
   const dynamicTopics = Array.from(new Set(allNews.map(item => item.topic).filter(Boolean))).sort() as string[];
@@ -84,14 +78,14 @@ export default function Home() {
         </div>
 
         <div className="flex gap-3">
-          <a href="https://www.youtube.com/@aisojang/posts" target="_blank" className="flex items-center gap-2 bg-white/10 hover:bg-red-600 text-white px-4 py-2 rounded-2xl border border-white/20 transition-all group">
+          <a href="https://www.youtube.com/@aisojang/posts" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-white/10 hover:bg-red-600 text-white px-4 py-2 rounded-2xl border border-white/20 transition-all group">
             <span className="text-lg group-hover:scale-110 transition">📺</span>
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-bold opacity-60">YOUTUBE</span>
               <span className="text-xs font-black">@aisojang</span>
             </div>
           </a>
-          <a href="https://aisojang.tistory.com" target="_blank" className="flex items-center gap-2 bg-white/10 hover:bg-orange-500 text-white px-4 py-2 rounded-2xl border border-white/20 transition-all group">
+          <a href="https://aisojang.tistory.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-white/10 hover:bg-orange-500 text-white px-4 py-2 rounded-2xl border border-white/20 transition-all group">
             <span className="text-lg group-hover:scale-110 transition">📝</span>
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-bold opacity-60">TISTORY</span>
@@ -148,63 +142,72 @@ export default function Home() {
           <span className="text-[10px] text-gray-300 italic">기준일: {appliedDate} ~ 현재</span>
         </div>
 
-        {filteredNews.map((item) => (
-          <div key={item.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="bg-blue-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-tighter">
-                  {item.topic || '기타'}
-                </span>
-                <span className="text-[10px] text-gray-400 font-medium">
-                  {new Date(item.created_at).toLocaleString('ko-KR')}
-                </span>
-              </div>
-              
-              <h3 className="text-xl font-bold text-gray-900 mb-5 leading-tight tracking-tight">
-                {item.title}
-              </h3>
+        {filteredNews.map((item) => {
+          // [수정됨] 이제 DB의 VIEW에서 youtube_url 컬럼이 직접 넘어오므로, 복잡한 체크 없이 바로 씁니다!
+          const youtubeUrl = item.youtube_url;
 
-              {/* 스크립트 본문 (기본 4줄 노출 + 펼치기 시 스크롤) */}
-              <div className="relative">
-                <div className={`
-                  text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-2xl p-5 border border-gray-100 
-                  whitespace-pre-wrap transition-all duration-300 overflow-y-auto
-                  ${expandedId === item.id ? 'max-h-[450px]' : 'max-h-[125px] overflow-hidden'}
-                `}>
-                  {item.script || "작성된 대본 본문이 없습니다."}
-                  {expandedId !== item.id && (
-                    <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none"></div>
-                  )}
+          return (
+            <div key={item.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="bg-blue-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-tighter">
+                    {item.topic || '기타'}
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-medium">
+                    {new Date(item.created_at).toLocaleString('ko-KR')}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center px-2 mt-2">
-                  <button 
-                    onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
-                    className="text-blue-600 text-[11px] font-bold hover:underline"
-                  >
-                    {expandedId === item.id ? '▲ 본문 접기' : '▼ 대본 전문 읽기 (스크롤)'}
-                  </button>
-                  <span className="text-[9px] text-gray-400 italic">약 {item.script?.length || 0}자</span>
-                </div>
-              </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-5 leading-tight tracking-tight">
+                  {item.title}
+                </h3>
 
-              {/* 버튼 액션 섹션 */}
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                {item.news_youtube_links?.[0]?.youtube_url ? (
-                  <a href={item.news_youtube_links[0].youtube_url} target="_blank" className="bg-red-600 text-white text-center py-3.5 rounded-2xl text-xs font-bold hover:bg-red-700 transition shadow-md">
-                    📺 유튜브 쇼츠
-                  </a>
-                ) : (
-                  <div className="bg-gray-100 text-gray-400 text-center py-3.5 rounded-2xl text-xs font-bold border border-gray-200">
-                    ❌ 링크 없음
+                <div className="relative">
+                  <div className={`
+                    text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-2xl p-5 border border-gray-100 
+                    whitespace-pre-wrap transition-all duration-300 overflow-y-auto
+                    ${expandedId === item.id ? 'max-h-[450px]' : 'max-h-[125px] overflow-hidden'}
+                  `}>
+                    {item.script || "작성된 대본 본문이 없습니다."}
+                    {expandedId !== item.id && (
+                      <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none"></div>
+                    )}
                   </div>
-                )}
-                <a href={item.link} target="_blank" className="border border-gray-200 text-gray-600 text-center py-3.5 rounded-2xl text-xs font-bold hover:bg-gray-50 transition">
-                  📰 원본 뉴스
-                </a>
+                  <div className="flex justify-between items-center px-2 mt-2">
+                    <button 
+                      onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                      className="text-blue-600 text-[11px] font-bold hover:underline"
+                    >
+                      {expandedId === item.id ? '▲ 본문 접기' : '▼ 대본 전문 읽기 (스크롤)'}
+                    </button>
+                    <span className="text-[9px] text-gray-400 italic">약 {item.script?.length || 0}자</span>
+                  </div>
+                </div>
+
+                {/* 버튼 액션 섹션 */}
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  {youtubeUrl ? (
+                    <a 
+                      href={youtubeUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-red-600 text-white text-center py-3.5 rounded-2xl text-xs font-bold hover:bg-red-700 transition shadow-md"
+                    >
+                      📺 유튜브 쇼츠
+                    </a>
+                  ) : (
+                    <div className="bg-gray-100 text-gray-400 text-center py-3.5 rounded-2xl text-xs font-bold border border-gray-200">
+                      ❌ 링크 없음
+                    </div>
+                  )}
+                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="border border-gray-200 text-gray-600 text-center py-3.5 rounded-2xl text-xs font-bold hover:bg-gray-50 transition">
+                    📰 원본 뉴스
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
