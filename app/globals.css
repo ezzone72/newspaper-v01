@@ -1,0 +1,11 @@
+/* app/globals.css */
+@import "tailwindcss";
+
+/* 
+  그 아래에 있던 body { @apply bg-gray-50... } 이 부분은 
+  일단 지우거나 아래처럼 순수 CSS로 바꾸세요. 
+*/
+body {
+  background-color: rgb(249, 250, 251); /* bg-gray-50 */
+  color: rgb(17, 24, 39); /* text-gray-900 */
+}
