@@ -27,6 +27,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('vw_news_with_youtube') // 기존 news_scripts에서 뷰로 변경
         .select('*') // 조인 구문 없이 전체 컬럼을 바로 가져옵니다
+        .neq('status', 'ERROR') // 👈 [추가] status가 'ERROR'가 아닌 데이터만 필터링
         .order('created_at', { ascending: false });
 
       if (!error && data) {
